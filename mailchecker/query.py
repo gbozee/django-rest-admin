@@ -1,4 +1,4 @@
-import mailer
+from . import mailer
 
 
 class GmailQuery(object):
@@ -97,8 +97,11 @@ class ThreadQuerySet(GmailQuerySet):
                       if 'to__icontains' in self.filter_query
                       else None)
                 all_threads = self.mailer.get_all_threads(self.credentials,
-                                                          to=to, cls=self.model)
-                self._cache = map(self._set_model_attrs, all_threads)
+                                                          to=to, cls=self.model)                
+                # import ipdb; ipdb.set_trace()
+                # Can be a generator instead
+                self._cache = [self._set_model_attrs(instance) for instance in all_threads]
+                # self._cache = map(self._set_model_attrs, all_threads)
         return self._cache
 
     def filter(self, *args, **kwargs):
@@ -147,7 +150,8 @@ class MessageQuerySet(GmailQuerySet):
                     self.filter_query['thread'],
                     cls=self.model
                 )
-                self._cache = map(self._set_model_attrs, messages)
+                self._cache = [self._set_model_attrs(instance) for instance in messages]
+                # self._cache = map(self._set_model_attrs, messages)
         return self._cache
 
     def get(self, *args, **kwargs):

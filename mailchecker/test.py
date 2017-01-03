@@ -1,5 +1,5 @@
 import unittest
-import mailer
+from . import mailer
 
 from django.conf import settings
 from django.db.models import Q
@@ -7,8 +7,8 @@ from oauth2client.file import Storage
 
 from .models import Thread, Message
 from .query import ThreadQuerySet, MessageQuerySet
-import mock
-from mailer import Bunch
+from unittest import mock, patch
+from .mailer import Bunch
 
 
 class ThreadTestCase(unittest.TestCase):
@@ -26,7 +26,7 @@ class ThreadTestCase(unittest.TestCase):
 
     def test_reverse_relation_lookup(self):
         self.mailer.get_messages_by_thread_id.return_value = [
-            Bunch(id=str(n)) for n in xrange(10)
+            Bunch(id=str(n)) for n in range(10)
         ]
         t = Thread(id='123123')
         self.assertEqual(t.messages.count(), 10)
@@ -49,8 +49,10 @@ class MessageTestCase(unittest.TestCase):
         self.mailer.get_thread_by_id.return_value = Message(
             id="00126"
         )
-        t = Message(id="00125")
+        t = Message(id="15963812c32a4c16")
+        # import pdb; pdb.set_trace()
         self.assertEqual(t.thread.id, "00126")
+        # import pdb; pdb.set_trace()
         self.assertEqual(
             self.mailer.get_thread_by_id.call_args[0][1],
             '00125'

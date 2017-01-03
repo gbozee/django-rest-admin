@@ -4,13 +4,22 @@ from django.db.models.base import ModelState
 from .options import ThreadOptions, MessageOptions
 from .manager import ThreadManager, MessageManager
 
+class ClassProperty(property):
+    def __get__(self, cls, owner):
+        return self.fget.__get__(None, owner)()
 
 class GmailModel(object):
     _deferred = False
     _state = ModelState()
-
+    
     def __unicode__(self):
         return self.id
+
+    @classmethod
+    def _objects(cls):
+        return cls._default_manager(cls)
+        
+    objects = ClassProperty(_objects)
 
     def serializable_value(self, field_name):
         try:
@@ -19,9 +28,12 @@ class GmailModel(object):
             return getattr(self, field_name)
         return getattr(self, field.attname)
 
+        
     @property
     def pk(self):
         return self.id
+
+        # klass.objects = klass._default_manager
 
     def __eq__(self, other):
         if isinstance(other, GmailModel):
@@ -72,7 +84,8 @@ class Message(GmailModel):
 
     @property
     def thread(self):
-        return Thread.objects.get(id=self.thread_id)
+        # return Thread.objects.get(id=self.thread_id)
+        return Thread.objects.get(id=self.id)
 
     @thread.setter
     def thread(self, value):

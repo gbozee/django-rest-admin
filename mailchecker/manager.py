@@ -1,13 +1,14 @@
 from oauth2client.file import Storage
 from django.conf import settings
-import mailer
+from . import mailer
 
 from .query import ThreadQuerySet, MessageQuerySet
 
 
 class GmailManager(object):
+    mailer = mailer
 
-    def __init__(self, model, **kwargs):
+    def __init__(self, model, **kwargs):        
         storage = Storage(settings.CREDENTIALS_PATH)
         self.credentials = storage.get()
         self.model = model

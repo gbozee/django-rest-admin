@@ -101,6 +101,7 @@ def get_all_messages(credentials, cls=Bunch):
 
 def get_thread_by_id(credentials, thread_id, cls=Bunch):
     gmail = _get_gmail_service(credentials)
+    # import pdb; pdb.set_trace()
     thread = gmail.users().threads().get(
         userId=ME,
         id=thread_id
