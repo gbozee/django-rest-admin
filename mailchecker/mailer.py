@@ -1,26 +1,39 @@
+import base64
 import httplib2
 from apiclient.discovery import build
 from email.mime.text import MIMEText
-import base64
-from django.db.models.fields import FieldDoesNotExist
+from mservice_model.api import ServiceApi, Bunch
 
 ME = 'me'
 
 
-class Bunch(object):
-    def __init__(self, *args, **kwargs):
-        self.__dict__ = kwargs
-        self.pk = self.id
+class GmailApi(ServiceApi):
+    def get_data(self, credentials, filter_by, cls=Bunch, **kwargs):
+        """Returns a tuple of the fetched data and the total count"""
+        messages = []
+        total = 0
+        if cls.__name__ == 'Message':
+            if 'pk' in filter_by:
+                messages = get_message_by_id(
+                    credentials, filter_by['pk'], cls=cls)
+            elif not 'thread' in filter_by:
+                messages = []
+            else:
+                messages, total = get_messages_by_thread_id(
+                    credentials, filter_by['thread'], cls=cls)
 
-    def __unicode__(self):
-        return self.id
+        if cls.__name__ == 'Thread':
+            if 'id' in filter_by:
+                messages = get_thread_by_id(
+                    credentials, filter_by['id'], cls=cls)
 
-    def serializable_value(self, field_name):
-        try:
-            field = self._meta.get_field(field_name)
-        except FieldDoesNotExist:
-            return getattr(self, field_name)
-        return getattr(self, field.attname)
+            else:
+                messages, total = get_all_threads(
+                    credentials, filter_by, cls=cls)
+                # import ipdb; ipdb.set_trace()
+                # Can be a generator instead
+
+        return messages, total
 
 
 def _get_gmail_service(credentials):
@@ -74,36 +87,13 @@ def send_message(credentials,
         body=payload, ).execute()
 
 
-def get_data(credentials, filter_by, cls=Bunch):
-    messages = []
-    if cls.__name__ == 'Message':
-        if 'pk' in filter_by:
-            messages = get_message_by_id(credentials, filter_by['pk'], cls=cls)
-        elif not 'thread' in filter_by:
-            messages = []
-        else:
-            messages = get_messages_by_thread_id(
-                credentials, filter_by['thread'], cls=cls)
-
-    if cls.__name__ == 'Thread':
-        if 'id' in filter_by:
-            messages = get_thread_by_id(
-                credentials, filter_by['id'], cls=cls)
-            
-        else:
-            messages = get_all_threads(
-                credentials, filter_by, cls=cls)
-            # import ipdb; ipdb.set_trace()
-            # Can be a generator instead
-    
-    return messages
-
-
 def get_messages_by_thread_id(credentials, thread_id, cls=Bunch):
     gmail = _get_gmail_service(credentials)
     thread = gmail.users().threads().get(userId=ME, id=thread_id).execute()
-
-    return [_make_message(m, cls) for m in thread['messages']]
+    import ipdb
+    ipdb.set_trace()
+    total = 0
+    return [_make_message(m, cls) for m in thread['messages']], total
 
 
 def get_all_threads(credentials, filter_by, cls=Bunch):
@@ -114,28 +104,32 @@ def get_all_threads(credentials, filter_by, cls=Bunch):
     if to:
         params['q'] = 'to:%s' % to
     threads = gmail.users().threads().list(**params).execute()
-    # import pdb
-    # pdb.set_trace()
+    total = threads['resultSizeEstimate']
     if not threads or (to != None and threads['resultSizeEstimate'] is 0):
-        return tuple()
+        return tuple(), total
     return tuple(
         cls(id=t['id'], number_of_messages=None, to=None)
-        for t in threads['threads'])
+        for t in threads['threads']), total
 
 
 def get_all_messages(credentials, cls=Bunch):
     gmail = _get_gmail_service(credentials)
     messages = gmail.users().messages().list(userId=ME, ).execute()['messages']
-    return [_make_message(m, cls) for m in messages]
+    import ipdb
+    ipdb.set_trace()
+    total = 0
+    return [_make_message(m, cls) for m in messages], total
 
 
 def get_thread_by_id(credentials, thread_id, cls=Bunch):
     gmail = _get_gmail_service(credentials)
     # import pdb; pdb.set_trace()
     thread = gmail.users().threads().get(userId=ME, id=thread_id).execute()
-    return [cls(id=thread['id'],
-               to=None,
-               number_of_messages=len(thread['messages']))]
+    return [
+        cls(id=thread['id'],
+            to=None,
+            number_of_messages=len(thread['messages']))
+    ]
 
 
 def get_message_by_id(credentials, message_id, cls=Bunch):

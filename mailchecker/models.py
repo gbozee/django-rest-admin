@@ -1,24 +1,27 @@
-
-from .base import GmailModel
-from .options import ThreadOptions, MessageOptions, ForeignKey
+from django.db.models import ForeignKey
+from mservice_model.models import ServiceModel
 from .manager import ThreadManager, MessageManager
 from . import mailer
-class ClassProperty(property):
-    """converts a class method to a class property. This is
-    a convineince for django's objects property"""
-
-    def __get__(self, cls, owner):
-        return self.fget.__get__(None, owner)()
+from django.db.models.fields import (AutoField, CharField, TextField)
+from mservice_model.options import ServiceOptions
 
 
-# GmailModel._meta._bind()
+class GmailAutoField(AutoField):
+    def to_python(self, value):
+        return value
 
-class Thread(GmailModel):
+
+class Thread(ServiceModel):
     _default_manager = ThreadManager
-    _service_api = mailer
+    _service_api = mailer.GmailApi()
+
     # _meta = ThreadOptions()
-    class Meta(ThreadOptions):
-        pass
+    class Meta(ServiceOptions):
+        _service_fields = {
+            'id': GmailAutoField(),
+            'to': CharField(max_length=200),
+            'number_of_messages': CharField(max_length=200),
+        }
 
     def __init__(self, id=None, to=None, number_of_messages=None):
         self.id = id
@@ -40,19 +43,25 @@ class Thread(GmailModel):
     def save(self, *args, **kwargs):
         pass
 
-class Message(GmailModel):
+
+class Message(ServiceModel):
     _default_manager = MessageManager
     _service_api = mailer
-    
-    # _meta = MessageOptions()
-    class Meta(MessageOptions):        
+
+    class Meta(ServiceOptions):
+        _service_fields = {
+            'id': GmailAutoField(),
+            'receiver': CharField(max_length=200),
+            'sender': CharField(max_length=200),
+            'snippet': CharField(max_length=200),
+            'body': TextField(),
+        }
         # def additional_bind(self):
         #     # from .models import Thread, Message
         #     # self.thread = ForeignKey(Thread)
         #     # self.thread.contribute_to_class(Thread, 'thread')
         #     # self.concrete_model = Message
         #     # self._service_other_fields['thread'] = self.thread
-        pass
 
     def __init__(self,
                  id=None,

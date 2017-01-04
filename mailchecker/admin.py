@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import Thread, Message
 from .forms import MessageForm, MessageInlineForm
+from mservice_model.admin import ServiceAdmin
 
 
 class MessageInline(admin.TabularInline):
@@ -9,23 +10,13 @@ class MessageInline(admin.TabularInline):
     form = MessageInlineForm
 
 
-class BaseAdmin(admin.ModelAdmin):
-    list_per_page = 10
-    def get_changelist(self, request, **kwargs):
-        """
-        Returns the ChangeList class for use on the changelist page.
-        """
-        from django.contrib.admin.views.main import ChangeList
-        return ChangeList
-
-
-class MessageAdmin(BaseAdmin):
+class MessageAdmin(ServiceAdmin):
     ordering = ('id', )
     model = Message
     form = MessageForm
 
 
-class ThreadAdmin(BaseAdmin):
+class ThreadAdmin(ServiceAdmin):
     # inlines = [
     #     MessageInline,
     # ]

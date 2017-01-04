@@ -39,7 +39,6 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'mailchecker',
     'concrete',
-    'mservice_model'
 )
 
 MIDDLEWARE_CLASSES = (

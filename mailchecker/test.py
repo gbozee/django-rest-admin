@@ -5,7 +5,7 @@ from django.conf import settings
 from django.db.models import Q
 from oauth2client.file import Storage
 from .models import Thread, Message
-from .query import ThreadQuerySet, MessageQuerySet
+from .manager import ThreadQuerySet, MessageQuerySet
 from .mailer import Bunch
 from unittest import mock
 
@@ -27,7 +27,7 @@ class ThreadTestCase(unittest.TestCase):
     def test_reverse_relation_lookup(self):
         self.mailer.get_data.return_value = [
             Bunch(id=str(n)) for n in range(10)
-        ]
+        ], 10
         t = Thread(id='123123')
         # import pdb; pdb.set_trace()
         self.assertEqual(t.messages.count(), 10)
@@ -49,7 +49,7 @@ class MessageTestCase(unittest.TestCase):
     def test_reverse_relation_works(self):
         self.mailer.get_data.return_value = [Message(
             id="00126"
-        )]
+        )], 0
         t = Message(id="00125")
         # import pdb; pdb.set_trace()
         self.assertEqual(t.thread.id, "00126")
@@ -70,7 +70,7 @@ class MessageQuerySetTestCase(unittest.TestCase):
     def test_message_with_filter(self):
         self.mailer.get_data.return_value = [
             Bunch(id='1'),
-        ]
+        ], 0
         mqs = MessageQuerySet(
             model=Message,
             credentials=self.credentials,
@@ -83,7 +83,7 @@ class MessageQuerySetTestCase(unittest.TestCase):
         )
 
     def test_message_with_id(self):
-        self.mailer.get_data.return_value = [Bunch(id='1')]
+        self.mailer.get_data.return_value = [Bunch(id='1')], 0
         mqs = MessageQuerySet(
             model=Message,
             credentials=self.credentials,
@@ -108,7 +108,7 @@ class ThreadQuerySetTestCase(unittest.TestCase):
             Bunch(id='1'),
             Bunch(id='2'),
             Bunch(id='3'),
-        ]
+        ], 3
 
         tqs = ThreadQuerySet(
             model=Thread,
@@ -123,7 +123,7 @@ class ThreadQuerySetTestCase(unittest.TestCase):
         ])
 
     def test_queryset_get(self):
-        self.mailer.get_data.return_value = [Bunch(id='target')]
+        self.mailer.get_data.return_value = [Bunch(id='target')], 1
         tqs = ThreadQuerySet(
             model=Thread,
             credentials=self.credentials,
@@ -139,7 +139,7 @@ class ThreadQuerySetTestCase(unittest.TestCase):
         self.mailer.get_data.return_value = [
             Bunch(id='target1'),
             Bunch(id='target2'),
-        ]
+        ], 2
         tqs = ThreadQuerySet(
             model=Thread,
             credentials=self.credentials,
@@ -162,7 +162,7 @@ class ThreadQuerySetTestCase(unittest.TestCase):
         self.mailer.get_data.return_value = [
             Bunch(id='target1'),
             Bunch(id='target2'),
-        ]
+        ], 2
         tqs = ThreadQuerySet(
             model=Thread,
             credentials=self.credentials,
