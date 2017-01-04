@@ -9,20 +9,30 @@ class MessageInline(admin.TabularInline):
     form = MessageInlineForm
 
 
-class MessageAdmin(admin.ModelAdmin):
-    ordering = ('id',)
+class BaseAdmin(admin.ModelAdmin):
+    list_per_page = 10
+    def get_changelist(self, request, **kwargs):
+        """
+        Returns the ChangeList class for use on the changelist page.
+        """
+        from django.contrib.admin.views.main import ChangeList
+        return ChangeList
+
+
+class MessageAdmin(BaseAdmin):
+    ordering = ('id', )
     model = Message
     form = MessageForm
 
 
-class ThreadAdmin(admin.ModelAdmin):
-    inlines = [
-        MessageInline,
-    ]
-    fields = ('number_of_messages',)
-    list_display = ('id',)
-    search_fields = ('to',)
-    ordering = ('id',)
+class ThreadAdmin(BaseAdmin):
+    # inlines = [
+    #     MessageInline,
+    # ]
+    fields = ('number_of_messages', )
+    list_display = ('id', 'to', 'number_of_messages')
+    search_fields = ('id', )
+    ordering = ('id', )
 
 
 admin.site.register([Thread], ThreadAdmin)

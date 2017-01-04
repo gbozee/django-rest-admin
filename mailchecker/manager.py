@@ -1,18 +1,17 @@
 from oauth2client.file import Storage
 from django.conf import settings
-from . import mailer
 
 from .query import ThreadQuerySet, MessageQuerySet
 
 
 class GmailManager(object):
-    mailer = mailer
+    mailer = None # The mailer component
 
     def __init__(self, model, **kwargs):        
         storage = Storage(settings.CREDENTIALS_PATH)
         self.credentials = storage.get()
         self.model = model
-        self.mailer = kwargs.get('mailer', mailer)
+        self.mailer = self.mailer or kwargs.get('mailer')
         self.initial_filter_query = kwargs.get('initial_filter_query', {})
 
     def complex_filter(self, filter_obj):

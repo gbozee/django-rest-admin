@@ -39,6 +39,7 @@ INSTALLED_APPS = (
     'django.contrib.staticfiles',
     'mailchecker',
     'concrete',
+    'mservice_model'
 )
 
 MIDDLEWARE_CLASSES = (
@@ -84,3 +85,47 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/dev/howto/static-files/
 
 STATIC_URL = '/static/'
+
+TEMPLATES = [
+    {
+        # See: https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-dirs
+        'DIRS': [
+            str(os.path.join(BASE_DIR, 'templates')),
+        ],
+        'OPTIONS': {
+            # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-debug
+            'debug': DEBUG,
+            # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-loaders
+            # https://docs.djangoproject.com/en/dev/ref/templates/api/#loader-types
+            'loaders': [
+                # 'admin_tools.template_loaders.Loader',
+                'django.template.loaders.filesystem.Loader',
+                'django.template.loaders.app_directories.Loader',
+            ],
+            # See: https://docs.djangoproject.com/en/dev/ref/settings/#template-context-processors
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.static',
+                'django.template.context_processors.tz',
+                'django.contrib.messages.context_processors.messages',
+                # Your stuff: custom template context processors go here
+            ],
+        },
+    },
+]
+
+# See: https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#std:setting-STATICFILES_DIRS
+STATICFILES_DIRS = (
+    str(os.path.join(BASE_DIR, 'static')),
+)
+# See: https://docs.djangoproject.com/en/dev/ref/contrib/staticfiles/#staticfiles-finders
+STATICFILES_FINDERS = (
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+)

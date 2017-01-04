@@ -6,3 +6,4 @@ client_secret.json
 .vscode/
 tags
 source.sh
+.cache

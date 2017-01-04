@@ -1,13 +1,12 @@
-from django.db.models.fields import (AutoField, CharField,
-                                     FieldDoesNotExist, TextField)
+from django.db.models.fields import (AutoField, CharField, FieldDoesNotExist,
+                                     TextField)
 from django.db.models import ForeignKey
 from django.utils.functional import cached_property
 from django.utils.datastructures import ImmutableList, OrderedSet
 from django.apps import apps
 IMMUTABLE_WARNING = (
     "The return type of '%s' should never be mutated. If you want to manipulate this list "
-    "for your own use, make a copy first."
-)
+    "for your own use, make a copy first.")
 
 
 def make_immutable_fields_list(name, data):
@@ -15,7 +14,6 @@ def make_immutable_fields_list(name, data):
 
 
 class CachedPropertiesMixin(object):
-
     @cached_property
     def fields(self):
         """
@@ -34,18 +32,12 @@ class CachedPropertiesMixin(object):
         # and all the models may not have been loaded yet; we don't want to cache
         # the string reference to the related_model.
         is_not_an_m2m_field = lambda f: not (f.is_relation and f.many_to_many)
-        is_not_a_generic_relation = lambda f: not (
-            f.is_relation and f.one_to_many)
-        is_not_a_generic_foreign_key = lambda f: not (
-            f.is_relation and f.many_to_one and not (
-                hasattr(f.rel, 'to') and f.rel.to)
-        )
+        is_not_a_generic_relation = lambda f: not (f.is_relation and f.one_to_many)
+        is_not_a_generic_foreign_key = lambda f: not (f.is_relation and f.many_to_one and not (hasattr(f.rel, 'to') and f.rel.to))
         return make_immutable_fields_list(
-            "fields",
-            (f for f in self._get_fields(reverse=False) if
-             is_not_an_m2m_field(f) and is_not_a_generic_relation(f)
-             and is_not_a_generic_foreign_key(f))
-        )
+            "fields", (f for f in self._get_fields(reverse=False)
+                       if is_not_an_m2m_field(f) and is_not_a_generic_relation(
+                           f) and is_not_a_generic_foreign_key(f)))
 
     @cached_property
     def concrete_fields(self):
@@ -57,9 +49,9 @@ class CachedPropertiesMixin(object):
         obtaining this field list.
         """
         try:
-            return make_immutable_fields_list(
-                "concrete_fields", (f for f in self.fields if f.concrete)
-            )
+            return make_immutable_fields_list("concrete_fields",
+                                              (f for f in self.fields
+                                               if f.concrete))
         except AttributeError:
             import ipdb
             ipdb.set_trace()
@@ -73,9 +65,9 @@ class CachedPropertiesMixin(object):
         combined with filtering of field properties is the public API for
         obtaining this field list.
         """
-        return make_immutable_fields_list(
-            "local_concrete_fields", (f for f in self.local_fields if f.concrete)
-        )
+        return make_immutable_fields_list("local_concrete_fields",
+                                          (f for f in self.local_fields
+                                           if f.concrete))
 
     # @raise_deprecation(suggested_alternative="get_fields()")
     def get_fields_with_model(self):
@@ -95,10 +87,8 @@ class CachedPropertiesMixin(object):
         obtaining this list.
         """
         return make_immutable_fields_list(
-            "many_to_many",
-            (f for f in self._get_fields(reverse=False)
-             if f.is_relation and f.many_to_many)
-        )
+            "many_to_many", (f for f in self._get_fields(reverse=False)
+                             if f.is_relation and f.many_to_many))
 
     @cached_property
     def related_objects(self):
@@ -113,15 +103,12 @@ class CachedPropertiesMixin(object):
         """
         all_related_fields = self._get_fields(
             forward=False, reverse=True, include_hidden=True)
-        return make_immutable_fields_list(
-            "related_objects",
-            (obj for obj in all_related_fields
-             if not obj.hidden or obj.field.many_to_many)
-        )
+        return make_immutable_fields_list("related_objects", (
+            obj for obj in all_related_fields
+            if not obj.hidden or obj.field.many_to_many))
 
 
 class GmailAutoField(AutoField):
-
     def to_python(self, value):
         return value
 
@@ -132,52 +119,58 @@ class GmailOptions(CachedPropertiesMixin):
     abstract = False
     swapped = False
     virtual_fields = []
-
-    def __init__(self, *args, **kwargs):
-        self._gmail_other_fields = {}
-
+    apps = apps
+    _service_pk_fields = 'id'
+    default_related_name = None,
+    
+    def __init__(self, meta, **kwargs):
+        self.meta = meta
+        self._service_other_fields = {}
+        self.app_label = kwargs.get('app_label', None)
+        model_name = kwargs.get('the_class', None)
+        if model_name:
+            self.model_name = model_name.__name__
+            self.verbose_name = self.model_name
+            self.verbose_name_raw = self.model_name
+            self.verbose_name_plural = self.model_name + 's'
+            self.object_name = self.model_name.lower()
+            # print(self.model_name)
+        self.private_fields = []
+        
     def add_field(self, *args, **kwargs):
         pass
 
     def _bind(self):
-        for field_name, field in self._gmail_fields.items():
+        for field_name, field in self._service_fields.items():
             setattr(self, field_name, field)
             field.set_attributes_from_name(field_name)
-        self.pk = self._gmail_fields[self._gmail_pk_field]
+        self.pk = self._service_fields[self._service_pk_fields]
+        self.additional_bind()
+
+    def additional_bind(self):
+        pass
 
     def get_fields(self, **kwargs):
         return self._get_fields()
 
     def _get_fields(self, reverse=True, forward=True):
-        return tuple(
-            field for field_name, field in
-            sorted(list(self._gmail_fields.items()) +
-                   list(self._gmail_other_fields.items()))
-        )
+        return tuple(field
+                     for field_name, field in sorted(
+                         list(self._service_fields.items()) + list(
+                             self._service_other_fields.items())))
 
     def get_field(self, field_name):
         try:
-            return self._gmail_fields[field_name]
+            return self._service_fields[field_name]
         except KeyError:
             try:
-                return self._gmail_other_fields[field_name]
+                return self._service_other_fields[field_name]
             except KeyError:
                 raise FieldDoesNotExist()
 
 
 class ThreadOptions(GmailOptions):
-    auto_created = False
-    app_label = 'mailchecker'
-    model_name = 'thread'
-    verbose_name = 'thread'
-    verbose_name_raw = 'thread'
-    verbose_name_plural = 'threads'
-    object_name = 'thread'
-    default_related_name = None,
-    apps = apps
-
-    _gmail_pk_field = 'id'
-    _gmail_fields = {
+    _service_fields = {
         'id': GmailAutoField(),
         'to': CharField(max_length=200),
         'number_of_messages': CharField(max_length=200),
@@ -185,18 +178,9 @@ class ThreadOptions(GmailOptions):
 
 
 class MessageOptions(GmailOptions):
-    app_label = 'mailchecker'
-    model_name = 'message'
-    verbose_name = 'message'
-    verbose_name_raw = 'message'
-    verbose_name_plural = 'messages'
-    object_name = 'message'
-    default_related_name = None
-    private_fields = []
-        
+    # private_fields = []
 
-    _gmail_pk_field = 'id'
-    _gmail_fields = {
+    _service_fields = {
         'id': GmailAutoField(),
         'receiver': CharField(max_length=200),
         'sender': CharField(max_length=200),
@@ -204,11 +188,11 @@ class MessageOptions(GmailOptions):
         'body': TextField(),
     }
 
-    def _bind(self):
-        super(MessageOptions, self)._bind()
-
-        from .models import Thread, Message
-        self.thread = ForeignKey(Thread)
-        self.thread.contribute_to_class(Thread, 'thread')
-        self.concrete_model = Message
-        self._gmail_other_fields['thread'] = self.thread
+    
+    # def additional_bind(self):
+    #     from .models import Thread, Message
+    #     self.thread = ForeignKey(Thread)
+    #     self.thread.contribute_to_class(Thread, 'thread')
+    #     self.concrete_model = Message
+    #     # self._gmail_other_fields['thread'] = self.thread
+    #     self._service_other_fields['thread'] = self.thread

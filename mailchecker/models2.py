@@ -1,58 +1,19 @@
-
 from .base import GmailModel
-from .options import ThreadOptions, MessageOptions, ForeignKey
-from .manager import ThreadManager, MessageManager
-from . import mailer
-class ClassProperty(property):
-    """converts a class method to a class property. This is
-    a convineince for django's objects property"""
+from .manager import MessageManager
+from .options import MessageOptions, ForeignKey
 
-    def __get__(self, cls, owner):
-        return self.fget.__get__(None, owner)()
-
-
-# GmailModel._meta._bind()
-
-class Thread(GmailModel):
-    _default_manager = ThreadManager
-    _service_api = mailer
-    # _meta = ThreadOptions()
-    class Meta(ThreadOptions):
-        pass
-
-    def __init__(self, id=None, to=None, number_of_messages=None):
-        self.id = id
-        self.to = to
-        self.number_of_messages = number_of_messages
-
-    @property
-    def messages(self):
-        return Message.objects.filter(thread=self.id)
-
-    def __unicode__(self):
-        return "<Thread %s with %s messages>" % (
-            self.id, "???"
-            if self.number_of_messages is None else self.number_of_messages)
-
-    def __repr__(self):
-        return self.__unicode__()
-
-    def save(self, *args, **kwargs):
-        pass
 
 class Message(GmailModel):
     _default_manager = MessageManager
-    _service_api = mailer
-    
+
     # _meta = MessageOptions()
-    class Meta(MessageOptions):        
-        # def additional_bind(self):
-        #     # from .models import Thread, Message
-        #     # self.thread = ForeignKey(Thread)
-        #     # self.thread.contribute_to_class(Thread, 'thread')
-        #     # self.concrete_model = Message
-        #     # self._service_other_fields['thread'] = self.thread
-        pass
+    class Meta(MessageOptions):
+        def additional_bind(self):
+            from .models import Thread
+            self.thread = ForeignKey(Thread)
+            self.thread.contribute_to_class(Thread, 'thread')
+            self.concrete_model = Message
+            self._service_other_fields['thread'] = self.thread
 
     def __init__(self,
                  id=None,
@@ -77,6 +38,7 @@ class Message(GmailModel):
 
     @property
     def thread(self):
+        from .models import Thread
         # return Thread.objects.get(id=self.thread_id)
         return Thread.objects.get(id=self.id)
 
@@ -100,7 +62,7 @@ class Message(GmailModel):
             return
 
         # Send message and fetch ID
-        result = self.objects.get_queryset()._create(
+        result = self._default_manager.get_queryset()._create(
             frm=self.sender,
             to=self.receiver,
             message_body=self.body,
@@ -108,10 +70,9 @@ class Message(GmailModel):
 
         # Not all results are returned from the API, re-pull and set
         # all fields (basically, reassigning the entire instance)
-        new_instance = self.objects.get(pk=result['id'])
+        new_instance = self._default_manager.get(pk=result['id'])
         for field_name in (f.name for f in self._meta.get_fields()):
             setattr(self, field_name, getattr(new_instance, field_name))
 
 
-Thread._meta._bind()
 Message._meta._bind()

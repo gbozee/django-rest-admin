@@ -1,13 +1,9 @@
-from . import mailer
-
-
 class GmailQuery(object):
     select_related = False
     order_by = tuple()
 
 
 class GmailQuerySet(object):
-
     def using(self, db):
         return self
 
@@ -16,7 +12,7 @@ class GmailQuerySet(object):
         self.ordered = True
         self.model = kwargs.pop('model')
         self.credentials = kwargs.pop('credentials')
-        self.mailer = kwargs.pop('mailer', mailer)
+        self.mailer = kwargs.pop('mailer', None)
         self.filter_query = kwargs.pop('filter_query', {})
         self.query = GmailQuery()
 
@@ -33,8 +29,7 @@ class GmailQuerySet(object):
             model=self.model,
             credentials=self.credentials,
             mailer=self.mailer,
-            filter_query=self.filter_query
-        )
+            filter_query=self.filter_query)
 
     def count(self):
         return len(self._get_data())
@@ -62,17 +57,12 @@ class GmailQuerySet(object):
         if len(args) > 0:
             filter_args.update(dict(args[0].children))
         return filter_args
-    
+
     def __len__(self):
         return len(self._get_data())
 
-    def _create(self, frm, to, message_body, thread_id=None):
-        return mailer.send_message(self.credentials, frm, to, message_body,
-                                   thread_id=thread_id)
-
 
 class ThreadQuerySet(GmailQuerySet):
-
     def get(self, *args, **kwargs):
         filter_args = self._get_filter_args(args, kwargs)
         if 'id' not in filter_args:
@@ -80,28 +70,21 @@ class ThreadQuerySet(GmailQuerySet):
 
         return ThreadQuerySet(
             model=self.model,
-            credentials = self.credentials,
-            mailer = self.mailer,
-            filter_query = {'id': filter_args['id']}
-        )[0]
+            credentials=self.credentials,
+            mailer=self.mailer,
+            filter_query={'id': filter_args['id']})[0]
 
     def _get_data(self):
+        """Get the query from the service api.
+        register all the possible queries. in this cas
+        field_query = ['id', 'to_contains']"""
         if not self._cache:
-            if 'id' in self.filter_query:
-                thread = self.mailer.get_thread_by_id(self.credentials,
-                                                      self.filter_query['id'],
-                                                      cls=self.model)
-                self._cache = [self._set_model_attrs(thread)]
-            else:
-                to = (self.filter_query['to__icontains']
-                      if 'to__icontains' in self.filter_query
-                      else None)
-                all_threads = self.mailer.get_all_threads(self.credentials,
-                                                          to=to, cls=self.model)                
-                # import ipdb; ipdb.set_trace()
-                # Can be a generator instead
-                self._cache = [self._set_model_attrs(instance) for instance in all_threads]
-                # self._cache = map(self._set_model_attrs, all_threads)
+            messages = self.mailer.get_data(
+                self.credentials, self.filter_query, cls=self.model)
+            self._cache = [
+                self._set_model_attrs(instance) for instance in messages
+            ]
+            # self._cache = map(self._set_model_attrs, all_threads)
         return self._cache
 
     def filter(self, *args, **kwargs):
@@ -109,14 +92,17 @@ class ThreadQuerySet(GmailQuerySet):
         if 'to__icontains' in filter_args:
             return ThreadQuerySet(
                 model=self.model,
-                credentials = self.credentials,
-                mailer = self.mailer,
-                filter_query = {'to__icontains': filter_args['to__icontains']}
-            )
+                credentials=self.credentials,
+                mailer=self.mailer,
+                filter_query={'to__icontains': filter_args['to__icontains']})
+        # import pdb; pdb.set_trace()
         return self
 
 
 class MessageQuerySet(GmailQuerySet):
+    def _create(self, frm, to, message_body, thread_id=None):
+        return self.mailer.send_message(
+            self.credentials, frm, to, message_body, thread_id=thread_id)
 
     def filter(self, *args, **kwargs):
         filter_args = self._get_filter_args(args, kwargs)
@@ -131,27 +117,16 @@ class MessageQuerySet(GmailQuerySet):
                 model=self.model,
                 credentials=self.credentials,
                 mailer=self.mailer,
-                filter_query = {'thread': tid}
-            )
+                filter_query={'thread': tid})
         return self
 
     def _get_data(self):
         if not self._cache:
-            if 'pk' in self.filter_query:
-                message = self.mailer.get_message_by_id(self.credentials,
-                                                        self.filter_query['pk'],
-                                                        cls=self.model)
-                self._cache = [self._set_model_attrs(message)]
-            elif not 'thread' in self.filter_query:
-                self._cache = []
-            else:
-                messages = self.mailer.get_messages_by_thread_id(
-                    self.credentials,
-                    self.filter_query['thread'],
-                    cls=self.model
-                )
-                self._cache = [self._set_model_attrs(instance) for instance in messages]
-                # self._cache = map(self._set_model_attrs, messages)
+            messages = self.mailer.get_data(
+                self.credentials, self.filter_query, cls=self.model)
+            self._cache = [
+                self._set_model_attrs(instance) for instance in messages
+            ]
         return self._cache
 
     def get(self, *args, **kwargs):
@@ -162,7 +137,6 @@ class MessageQuerySet(GmailQuerySet):
 
         return MessageQuerySet(
             model=self.model,
-            credentials = self.credentials,
-            mailer = self.mailer,
-            filter_query = {'pk': filter_args['pk']}
-        )[0]
+            credentials=self.credentials,
+            mailer=self.mailer,
+            filter_query={'pk': filter_args['pk']})[0]
