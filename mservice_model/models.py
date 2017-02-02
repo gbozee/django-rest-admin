@@ -95,3 +95,11 @@ class ServiceModel(with_metaclass(constructor)):
 
     def _get_pk_val(self):
         return None
+
+    def save(self, *args, **kwargs):
+        fields = [a.name for a in self._meta.get_fields()]
+        data = {}
+        for field in fields:
+            data.update({field:getattr(self, field)})
+        return self.objects.get_queryset().create(**data)
+

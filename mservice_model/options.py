@@ -116,6 +116,7 @@ class ServiceOptions(CachedPropertiesMixin):
     virtual_fields = []
     apps = apps
     _service_pk_fields = 'id'
+    related_fkey_lookups = []
     default_related_name = None,
 
     def __init__(self, meta, **kwargs):
@@ -123,11 +124,14 @@ class ServiceOptions(CachedPropertiesMixin):
         self._service_other_fields = {}
         self.app_label = kwargs.get('app_label', None)
         model_name = kwargs.get('the_class', None)
+        # import ipdb; ipdb.set_trace()
         if model_name:
             self.model_name = model_name.__name__
-            self.verbose_name = self.model_name
+            if not hasattr(self, 'verbose_name'):
+                self.verbose_name = self.model_name
+            self.verbose_name_plural = self.verbose_name + 's'
+            # import ipdb; ipdb.set_trace()
             self.verbose_name_raw = self.model_name
-            self.verbose_name_plural = self.model_name + 's'
             self.object_name = self.model_name.lower()
             # print(self.model_name)
         self.private_fields = []

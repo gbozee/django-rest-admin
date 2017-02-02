@@ -24,6 +24,11 @@ class ThreadAdmin(ServiceAdmin):
     list_display = ('id', 'to', 'number_of_messages')
     search_fields = ('id', )
     ordering = ('id', )
+    actions = ['view_ids']
+
+    def view_ids(self, request, queryset):
+        import pdb; pdb.set_trace()
+        pass
 
 
 admin.site.register([Thread], ThreadAdmin)

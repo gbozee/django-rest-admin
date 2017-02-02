@@ -8,7 +8,7 @@ ME = 'me'
 
 
 class GmailApi(ServiceApi):
-    def get_data(self, credentials, filter_by, cls=Bunch, **kwargs):
+    def get_data(self, credentials=None, filter_by=None, cls=Bunch, **kwargs):
         """Returns a tuple of the fetched data and the total count"""
         messages = []
         total = 0

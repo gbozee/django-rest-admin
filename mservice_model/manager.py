@@ -20,10 +20,18 @@ class ServiceManager(object):
         return iter(self.get_queryset())
 
     def all(self):
-        return self.get_queryset()
+        return self.get_queryset().all()
+
+    def first(self):
+        return self.get_queryset().first()
+
+    def last(self):
+        return self.get_queryset().last()
 
     def count(self):
-        return len(self.get_queryset())
+        queryset = self.get_queryset()
+        queryset.all()
+        return queryset.total_count
 
     def filter(self, *args, **kwargs):
         return self.get_queryset().filter(*args, **kwargs)
@@ -37,3 +45,6 @@ class ServiceManager(object):
 
     def get(self, *args, **kwargs):
         return self.get_queryset().get(*args, **kwargs)
+
+    def create(self, **kwargs):
+        return self.get_queryset().create(**kwargs)

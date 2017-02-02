@@ -37,3 +37,4 @@ class ServicePaginator(Paginator):
 class ServiceAdmin(admin.ModelAdmin):
     list_per_page = 100
     paginator = ServicePaginator
+    

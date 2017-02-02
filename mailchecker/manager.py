@@ -5,16 +5,15 @@ from mservice_model.queryset import ServiceQuerySet
 
 
 class ThreadQuerySet(ServiceQuerySet):
-    def get(self, *args, **kwargs):
-        filter_args = self._get_filter_args(args, kwargs)
-        if 'id' not in filter_args:
-            raise Exception("No ID found in Thread GET")
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.credentials = kwargs.pop('credentials')
 
-        return ThreadQuerySet(
-            model=self.model,
-            credentials=self.credentials,
-            mailer=self.mailer,
-            filter_query={'id': filter_args['id']})[0]
+    def params_for_fetching_data(self, **kwargs):
+        return super().params_for_fetching_data(credentials=self.credentials, **kwargs)
+
+    def _clone(self, *args, **kwargs):
+        return super()._clone(credentials=self.credentials, **kwargs)
 
     def filter(self, *args, **kwargs):
         filter_args = self._get_filter_args(args, kwargs)
