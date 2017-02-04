@@ -93,13 +93,14 @@ class RequestAPI(ServiceApi):
         total = 0
         date_range = None
         last_id = None
-        print(filter_by)
+        new_filter_by = {**filter_by, **kwargs}
+        print(new_filter_by)
         if cls.__name__ == 'BaseRequestTutor':
             if 'pk' in filter_by:
-                base_requests = instance.get_request_by_id(filter_by['pk'],
+                base_requests = instance.get_request_by_id(new_filter_by['pk'],
                                                            cls)
             else:
-                base_requests, total, date_range, last_id = instance.get_all_requests(filter_by,
+                base_requests, total, date_range, last_id = instance.get_all_requests(new_filter_by,
                     cls)
                 date_range = self.serialize_date_range(date_range)
         return base_requests, total, date_range, last_id

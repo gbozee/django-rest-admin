@@ -108,6 +108,8 @@ class ServiceQuerySet(object):
         """Get the query from the service api.
         register all the possible queries. in this cas
         field_query = ['id', 'to_contains']"""
+        if 'page' in kwargs:
+            self._cache = None
         if not self._cache:
             messages, self.total_count, self.date_range, self.last_id = self.mailer.get_data(
                 **self.params_for_fetching_data(), **kwargs)
