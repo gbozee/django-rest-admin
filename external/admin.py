@@ -9,4 +9,4 @@ class ParentRequestAdmin(ServiceAdmin):
     list_display = ('first_name', 'last_name')
     form = BaseRequestTutorForm
     date_hierarchy  = 'modified'
-    
+    search_fields = ('^email',)

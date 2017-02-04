@@ -1,7 +1,7 @@
 from django.contrib import admin
-
 from django.core.paginator import Paginator, Page
 from django.utils.functional import cached_property
+
 
 
 class ServicePage(Page):
@@ -15,8 +15,8 @@ class ServicePaginator(Paginator):
         Returns the total number of objects, across all pages.
         """
         # import ipdb; ipdb.set_trace()
+        self.object_list._get_data()
         try:
-            self.object_list.get_data()
             return self.object_list.total_count
         except (AttributeError, TypeError):
             # AttributeError if object_list has no count() method.
@@ -37,4 +37,12 @@ class ServicePaginator(Paginator):
 class ServiceAdmin(admin.ModelAdmin):
     list_per_page = 100
     paginator = ServicePaginator
+
+    def get_changelist(self, request, **kwargs):
+        """
+        Returns the ChangeList class for use on the changelist page.
+        """
+        from .main import ServiceChangeList as ChangeList
+        return ChangeList
+
     

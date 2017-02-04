@@ -30,8 +30,10 @@ class FetchAPI(FetchHelpers):
         response.raise_for_status()
         return response.json()['actions']['POST']
 
-    def get_all_requests(self, cls):
+    def get_all_requests(self, filter_by, cls):
         params = {'field_name': 'modified'}
+        params = {**filter_by, **params}
+        # import ipdb; ipdb.set_trace()
         response = requests.get("{}/requests/".format(self.base_url),
                                 params=params)
         response.raise_for_status()
@@ -97,7 +99,7 @@ class RequestAPI(ServiceApi):
                 base_requests = instance.get_request_by_id(filter_by['pk'],
                                                            cls)
             else:
-                base_requests, total, date_range, last_id = instance.get_all_requests(
+                base_requests, total, date_range, last_id = instance.get_all_requests(filter_by,
                     cls)
                 date_range = self.serialize_date_range(date_range)
         return base_requests, total, date_range, last_id
