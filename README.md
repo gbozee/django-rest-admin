@@ -1,4 +1,4 @@
-### django-admin-microservice
+### django-rest-admin
 
 This is a django app that attempts to get the django orm to hook up to restful services
 instead of the database. So instead of querying data from a database, you would be querying 
@@ -76,6 +76,8 @@ class FetchAPI(FetchHelpers):
 instance = ServiceApi(FetchAPI("http://192.168.56.101:8000"))
 
 ```
+Take a look at the `external` package to get a feel of how it would be implemented.
 
 TODO
 1. Better Documentation
+2. Tests
