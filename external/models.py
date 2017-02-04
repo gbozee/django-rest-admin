@@ -1,26 +1,13 @@
 from mservice_model.models import ServiceModel
-from mservice_model.manager import ServiceManager
-from mservice_model.queryset import ServiceQuerySet
 from mservice_model.options import ServiceOptions
 from django.db.models import fields
 # Create your models here.
-from external import api as request_api
-
-
-class BaseRequestTutorQuerySet(ServiceQuerySet):
-    pass
-
-
-class BaseRequestTutorManager(ServiceManager):
-    queryset = BaseRequestTutorQuerySet
-
+from external.api import instance as request_api
 
 class BaseRequestTutor(ServiceModel):
-    _default_manager = BaseRequestTutorManager
-    _service_api = request_api.RequestAPI()
+    _service_api = request_api
 
-    class Meta(ServiceOptions):
-        _service_fields = request_api.get_request_fields()
+    class Meta:
         ordering = ('id',)
         verbose_name = "Client Request Detail"
 
@@ -30,5 +17,3 @@ class BaseRequestTutor(ServiceModel):
 
     def __repr__(self):
         return "<BaseRequestTutor {}>".format(self.email)
-
-BaseRequestTutor._meta._bind()

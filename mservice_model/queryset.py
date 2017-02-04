@@ -18,8 +18,12 @@ class ServiceQuerySet(object):
         self.mailer = kwargs.pop('mailer', None)
         self.filter_query = kwargs.pop('filter_query', {})
         self.query = GmailQuery()
+        self.order_dict = ()
 
     def order_by(self, *args, **kwargs):
+        self.order_dict = args
+        self._cache = None
+        self._get_data()
         return self
 
     def aggregate(self, **kwargs):
@@ -102,13 +106,13 @@ class ServiceQuerySet(object):
     def params_for_fetching_data(self, **kwargs):
         """parameters to be passed to _get_data function. should BufferError
         overidden by child classes"""
-        return dict(filter_by=self.filter_query,cls=self.model, **kwargs)
+        return dict(filter_by=self.filter_query,order_by=self.order_dict,cls=self.model, **kwargs)
 
     def _get_data(self, **kwargs):
         """Get the query from the service api.
         register all the possible queries. in this cas
         field_query = ['id', 'to_contains']"""
-        if 'page' in kwargs:
+        if kwargs:
             self._cache = None
         if not self._cache:
             messages, self.total_count, self.date_range, self.last_id = self.mailer.get_data(
@@ -130,3 +134,9 @@ class ServiceQuerySet(object):
         assert order in ('ASC', 'DESC'), \
             "'order' must be either 'ASC' or 'DESC'."
         return self.mailer.datetimes(field_name, kind, order, self.filter_query)
+
+    def distinct(self):
+        return self
+
+    def values_list(self, *args, **kwargs):
+        return self.mailer.get_values_list(*args, **kwargs)

@@ -44,5 +44,6 @@ class ServiceAdmin(admin.ModelAdmin):
         """
         from .main import ServiceChangeList as ChangeList
         return ChangeList
+        
 
     

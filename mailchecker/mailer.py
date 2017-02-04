@@ -136,3 +136,4 @@ def get_message_by_id(credentials, message_id, cls=Bunch):
     gmail = _get_gmail_service(credentials)
     message = gmail.users().messages().get(userId=ME, id=message_id).execute()
     return [_make_message(message, cls)]
+

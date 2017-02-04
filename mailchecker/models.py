@@ -13,7 +13,7 @@ class GmailAutoField(AutoField):
 
 class Thread(ServiceModel):
     _default_manager = ThreadManager
-    _service_api = mailer.GmailApi()
+    _service_api = mailer.GmailApi("h")
 
     # _meta = ThreadOptions()
     class Meta(ServiceOptions):
@@ -122,5 +122,5 @@ class Message(ServiceModel):
             setattr(self, field_name, getattr(new_instance, field_name))
 
 
-Thread._meta._bind()
-Message._meta._bind()
+# Thread._meta._bind()
+# Message._meta._bind()

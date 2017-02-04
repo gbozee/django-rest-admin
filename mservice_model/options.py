@@ -14,6 +14,7 @@ def make_immutable_fields_list(name, data):
 
 
 class CachedPropertiesMixin(object):
+
     @cached_property
     def fields(self):
         """
@@ -32,8 +33,10 @@ class CachedPropertiesMixin(object):
         # and all the models may not have been loaded yet; we don't want to cache
         # the string reference to the related_model.
         is_not_an_m2m_field = lambda f: not (f.is_relation and f.many_to_many)
-        is_not_a_generic_relation = lambda f: not (f.is_relation and f.one_to_many)
-        is_not_a_generic_foreign_key = lambda f: not (f.is_relation and f.many_to_one and not (hasattr(f.rel, 'to') and f.rel.to))
+        is_not_a_generic_relation = lambda f: not (
+            f.is_relation and f.one_to_many)
+        is_not_a_generic_foreign_key = lambda f: not (
+            f.is_relation and f.many_to_one and not (hasattr(f.rel, 'to') and f.rel.to))
         return make_immutable_fields_list(
             "fields", (f for f in self._get_fields(reverse=False)
                        if is_not_an_m2m_field(f) and is_not_a_generic_relation(
@@ -123,6 +126,7 @@ class ServiceOptions(CachedPropertiesMixin):
         self.meta = meta
         self._service_other_fields = {}
         self.app_label = kwargs.get('app_label', None)
+        self._service_fields = kwargs.get('_service_fields', {})
         model_name = kwargs.get('the_class', None)
         # import ipdb; ipdb.set_trace()
         if model_name:

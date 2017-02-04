@@ -4,11 +4,22 @@ from django.db.models.fields import FieldDoesNotExist
 from django.db.models.base import ModelState
 from django.apps import apps
 from .options import ServiceOptions
+from .manager import ServiceManager
+from .queryset import ServiceQuerySet
 
 # from .options2 import ServiceOptions
 
 
+class BaseManager(ServiceManager):
+    queryset = ServiceQuerySet
+
+
 class constructor(type):
+    def __init__(cls, name, bases, clsdict):
+        if len(cls.mro()) > 2:
+            cls._meta._bind()
+        super().__init__(name, bases, clsdict)
+
     def __new__(cls, name, bases, attrs):
         super_new = super(constructor, cls).__new__
         parents = [b for b in bases if isinstance(b, constructor)]
@@ -17,11 +28,13 @@ class constructor(type):
 
         module = attrs.pop('__module__', None)
         new_class = super_new(cls, name, bases, attrs)
-        attr_meta = attrs.pop('Meta', ServiceOptions)
+        attr_meta = attrs.pop('Meta', None)
         if not attr_meta:
-            meta = getattr(new_class, 'Meta', None)
+            meta = getattr(new_class, 'Meta', ServiceOptions)
         else:
-            meta = attr_meta
+            params = {key:value for key, value in attr_meta.__dict__.items() if not key.startswith('__') and not callable(key)}
+            SubClass = type(attr_meta.__name__, (ServiceOptions,), params)
+            meta = SubClass
         base_meta = getattr(new_class, '_meta', None)
 
         app_label = None
@@ -34,18 +47,26 @@ class constructor(type):
                     "INSTALLED_APPS." % (module, name))
             else:
                 app_label = app_config.label
+        _service_fields = getattr(meta, '_service_fields',None)
+        
         # import pdb
         # pdb.set_trace()
-        new_class.add_to_class(
-            '_meta', attr_meta(
-                meta, app_label=app_label, the_class=new_class))
-
-        dm = attrs.pop('_default_manager', None)
+        
+        dm = attrs.pop('_default_manager', BaseManager)
         service = attrs.pop('_service_api', None)
+        if not _service_fields:
+            _service_fields = service.initialize()
+            # import ipdb; ipdb.set_trace()
+        new_class.add_to_class(
+            '_meta', meta(
+                meta, app_label=app_label, the_class=new_class,
+                _service_fields=_service_fields))
+
         # import pdb; pdb.set_trace()
         if dm:
             new_class._default_manager = dm(new_class, mailer=service)
             new_class.objects = new_class._default_manager
+        
         return new_class
 
     def add_to_class(cls, name, value):
@@ -100,6 +121,7 @@ class ServiceModel(with_metaclass(constructor)):
         fields = [a.name for a in self._meta.get_fields()]
         data = {}
         for field in fields:
-            data.update({field:getattr(self, field)})
+            data.update({field: getattr(self, field)})
         return self.objects.get_queryset().create(**data)
+
 
