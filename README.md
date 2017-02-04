@@ -78,6 +78,9 @@ instance = ServiceApi(FetchAPI("http://192.168.56.101:8000"))
 ```
 Take a look at the `external` package to get a feel of how it would be implemented.
 
+Inspiration for this project
+https://www.youtube.com/watch?v=VgM0qmpHDiE
+
 TODO
 
 1. Better Documentation
