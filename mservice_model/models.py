@@ -6,7 +6,7 @@ from django.apps import apps
 from .options import ServiceOptions
 from .manager import ServiceManager
 from .queryset import ServiceQuerySet
-
+from django.forms import modelform_factory
 # from .options2 import ServiceOptions
 
 
@@ -124,4 +124,19 @@ class ServiceModel(with_metaclass(constructor)):
             data.update({field: getattr(self, field)})
         return self.objects.get_queryset().create(**data)
 
+    
+    def __init__(self, **kwargs):
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
+
+
+def model_factory(service, name, base_class=None):
+    BaseClass = base_class or object
+    class SampleModel(ServiceModel,BaseClass):
+        _service_api = service
+
+        class Meta:
+            app_label = name.lower()
+    SampleModel.__name__ = name
+    return SampleModel

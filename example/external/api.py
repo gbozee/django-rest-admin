@@ -14,20 +14,6 @@ class FetchAPI(FetchHelpers):
         params = {**kwargs, **{'field': field_names}}
         return self._fetch_data('GET', self._path('/requests/values_list'), params=params)
 
-    def get_fields(self):
-        return self._fetch_data('OPTIONS', self._path('/requests/'))['actions']['POST']
-
-    def get_all_objects(self, filter_by, order_by, cls):
-        params = {**filter_by, **{'field_name': 'modified'}}
-        if order_by:
-            params.update(ordering=','.join(order_by))
-        print(order_by)
-        data = self._fetch_data('GET', self._path('/requests/'), params=params)
-        as_objects = [self._make_base_request(o, cls) for o in data['results']]
-        total = data['count']
-        date_range = data.get('date_range')
-        last_id = data.get('last_id')
-        return as_objects, total, date_range, last_id
 
     def get_datetimes(self, field_name, kind, order, filter_query, **kwargs):
         params = dict(field_name=field_name, kind=kind,
@@ -40,4 +26,4 @@ class FetchAPI(FetchHelpers):
 
 
 # instance = FetchAPI("http://192.168.56.101:8000")
-instance = ServiceApi(FetchAPI("http://192.168.56.101:8000"))
+instance = ServiceApi("http://192.168.56.101:8000/requests/")

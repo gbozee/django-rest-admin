@@ -39,73 +39,6 @@ class Bunch(object):
         return getattr(self, field.attname)
 
 
-class ServiceApi(object):
-
-    def __init__(self, api_instance):
-        self.instance = api_instance
-
-    def get_data(self, filter_by, order_by, cls=Bunch, **kwargs):
-        base_requests = []
-        total = 0
-        date_range = None
-        last_id = None
-        new_filter_by = {**filter_by, **kwargs}
-        print(new_filter_by)
-        if 'pk' in filter_by:
-            base_requests = self.instance.get_object_by_id(new_filter_by['pk'],
-                                                           cls)
-        else:
-            base_requests, total, date_range, last_id = self.instance.get_all_objects(new_filter_by,
-                                                                                      order_by, cls)
-            date_range = self.serialize_date_range(date_range)
-        return base_requests, total, date_range, last_id
-
-    def create(self, cls=Bunch, **kwargs):
-        as_dict = self.to_serializable_dict(**kwargs)
-        return self.instance._make_base_request(as_dict, cls)
-
-    def fetch_date_range(self, field_name):
-        return self.instance.get_date_range(field_name)
-
-    def serialize_date_range(self, date_range):
-        result = date_range
-        result.update(first=maya.when(result['first']).datetime())
-        result.update(last=maya.when(result['last']).datetime())
-        return result
-
-    def aggregate(self, **kwargs):
-        aliases = [x.default_alias for key, x in kwargs.items()]
-        field_name = aliases[0].split('__')[0]
-        result = self.fetch_date_range(field_name)
-        if 'first' in kwargs.keys():
-            result.update(first=maya.when(result['first']).datetime())
-        if 'last' in kwargs.keys():
-            result.update(last=maya.when(result['last']).datetime())
-        return result
-
-    def fetch_datetimes(self, *args, **kwargs):
-        return self.instance.get_datetimes(*args, **kwargs)
-
-    def datetimes(self, *args, **kwargs):
-        value = [
-            maya.parse(x).datetime("Africa/Lagos")
-            for x in self.fetch_datetimes(*args, **kwargs)
-        ]
-        return value
-
-    def get_values_list(self, *args, **kwargs):
-        return self.instance.get_values_list(*args, **kwargs)
-
-    def to_serializable_dict(self, **kwargs):
-        """Converts all values of kwargs to a
-        serializable value in python"""
-        as_string = json.dumps(kwargs, cls=MyEncoder)
-        return json.loads(as_string)
-
-    def initialize(self):
-        return self.instance.construct_model_fields()
-
-
 class FetchHelpers(object):
     """The api class to implement all the api calls responsible
     to get the admin interface to be functional"""
@@ -147,7 +80,7 @@ class FetchHelpers(object):
         response.raise_for_status()
         return response.json()
 
-    def _path(self, path):
+    def _path(self, path=''):
         return self.base_url + path
 
     def _populate_base_request_fields(self, data):
@@ -168,7 +101,8 @@ class FetchHelpers(object):
                 'null': value['required'],
             }
             if value['type'] in ["string", "email"]:
-                default_dict.update(max_length=value['max_length'])
+                if value.get('max_length'):
+                    default_dict.update(max_length=value['max_length'])
             if value['type'] == 'field':
                 default_dict.update(max_length=70)
             if key == 'id':
@@ -183,7 +117,9 @@ class FetchHelpers(object):
         return self.get_fields()
 
     def get_fields(self):
-        raise NotImplementedError
+        """Makes an OPTIONS call to the djangorestframework endpoint"""
+        fetched_data =  self._fetch_data('OPTIONS', self._path(''))
+        return fetched_data['actions']['POST']
 
     def construct_model_fields(self):
         data = self.fields
@@ -202,8 +138,90 @@ class FetchHelpers(object):
         django's orm .values_list. takes an optional parameter flat"""
         raise NotImplementedError
 
-    def get_object_by_id(self, *args, **kwargs):
-        raise NotImplementedError
+    def get_object_by_id(self, request_id, cls=Bunch):
+        data = self._fetch_data('GET', self._path(
+            '{}/'.format(request_id)))
+        return [self._make_base_request(data, cls)]
 
     def get_all_objects(self, filter_by, order_by, cls):
-        raise NotImplementedError
+        params = {**filter_by, **{'field_name': 'modified'}}
+        if order_by:
+            params.update(ordering=','.join(order_by))
+        print(order_by)
+        data = self._fetch_data('GET', self._path(''), params=params)
+        as_objects = [self._make_base_request(o, cls) for o in data['results']]
+        total = data['count']
+        date_range = data.get('date_range')
+        last_id = data.get('last_id')
+        return as_objects, total, date_range, last_id
+
+
+
+class ServiceApi(object):
+
+    def __init__(self, api_instance, base_class=FetchHelpers):
+        self.instance = FetchHelpers(api_instance)
+
+    def get_data(self, filter_by, order_by, cls=Bunch, **kwargs):
+        base_requests = []
+        total = 0
+        date_range = None
+        last_id = None
+        new_filter_by = {**filter_by, **kwargs}
+        print(new_filter_by)
+        if 'pk' in filter_by:
+            base_requests = self.instance.get_object_by_id(new_filter_by['pk'],
+                                                           cls)
+        else:
+            base_requests, total, date_range, last_id = self.instance.get_all_objects(new_filter_by,
+                                                                                      order_by, cls)
+            date_range = self.serialize_date_range(date_range)
+        return base_requests, total, date_range, last_id
+
+    def create(self, cls=Bunch, **kwargs):
+        as_dict = self.to_serializable_dict(**kwargs)
+        return self.instance._make_base_request(as_dict, cls)
+
+    def fetch_date_range(self, field_name):
+        return self.instance.get_date_range(field_name)
+
+    def serialize_date_range(self, date_range):
+        result = date_range or {}
+        if result:
+            result.update(first=maya.when(result['first']).datetime())
+            result.update(last=maya.when(result['last']).datetime())
+        return result
+
+    def aggregate(self, **kwargs):
+        aliases = [x.default_alias for key, x in kwargs.items()]
+        field_name = aliases[0].split('__')[0]
+        result = self.fetch_date_range(field_name)
+        if 'first' in kwargs.keys():
+            result.update(first=maya.when(result['first']).datetime())
+        if 'last' in kwargs.keys():
+            result.update(last=maya.when(result['last']).datetime())
+        return result
+
+    def fetch_datetimes(self, *args, **kwargs):
+        return self.instance.get_datetimes(*args, **kwargs)
+
+    def datetimes(self, *args, **kwargs):
+        value = [
+            maya.parse(x).datetime("Africa/Lagos")
+            for x in self.fetch_datetimes(*args, **kwargs)
+        ]
+        return value
+
+    def get_values_list(self, *args, **kwargs):
+        return self.instance.get_values_list(*args, **kwargs)
+
+    def to_serializable_dict(self, **kwargs):
+        """Converts all values of kwargs to a
+        serializable value in python"""
+        as_string = json.dumps(kwargs, cls=MyEncoder)
+        return json.loads(as_string)
+
+    def initialize(self):
+        """"""
+        return self.instance.construct_model_fields()
+

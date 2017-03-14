@@ -7,3 +7,4 @@ client_secret.json
 tags
 source.sh
 .cache
+__pycache__

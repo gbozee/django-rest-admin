@@ -112,6 +112,7 @@ class ServiceQuerySet(object):
         """Get the query from the service api.
         register all the possible queries. in this cas
         field_query = ['id', 'to_contains']"""
+        import pdb; pdb.set_trace()
         if kwargs:
             self._cache = None
         if not self._cache:

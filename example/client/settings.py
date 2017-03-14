@@ -38,8 +38,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'mailchecker',
-    'external',
+    # 'mailchecker',
+    # 'external',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -52,9 +52,9 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 )
 
-ROOT_URLCONF = 'mailchecker.urls'
+ROOT_URLCONF = 'example.client.urls'
 
-WSGI_APPLICATION = 'mailchecker.wsgi.application'
+WSGI_APPLICATION = 'example.client.wsgi.application'
 
 
 # Database

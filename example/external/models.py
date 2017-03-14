@@ -11,9 +11,7 @@ class BaseRequestTutor(ServiceModel):
         ordering = ('id',)
         verbose_name = "Client Request Detail"
 
-    def __init__(self, **kwargs):
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+
 
     def __repr__(self):
         return "<BaseRequestTutor {}>".format(self.email)
