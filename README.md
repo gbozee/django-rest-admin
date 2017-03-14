@@ -85,3 +85,9 @@ TODO
 
 1. Better Documentation
 2. Tests
+
+Contributor:
+Oyeniyi biola
+Osayamen Omigie
+Agbaneje Obiamaka
+Ogunsola Oluwatosin
