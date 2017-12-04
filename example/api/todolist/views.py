@@ -18,18 +18,26 @@ class StandardResultsSetPagination(pagination.PageNumberPagination):
     def get_paginated_response(self, data, queryset, field):
         last_record = queryset.last()
         first_record = queryset.first()
-        response = OrderedDict([
+        dict_val = [
             ('count', self.page.paginator.count),
             ('next', self.get_next_link()),
             ('previous', self.get_previous_link()),
-            ('last_id', last_record.pk),
-            ('first_id', first_record.pk),
             ('results', data),
-        ])
+        ]
+        if last_record:
+            dict_val.append( ('last_id', last_record.pk),
+            )
+        if first_record:
+            dict_val.append( ('first_id', first_record.pk),
+            )
+
+        response = OrderedDict(dict_val)
+        model_fields = [x.name for x in queryset.model._meta.get_fields()]
         if field:
-            date_range = queryset.aggregate(
-                first=models.Min(field), last=models.Max(field))
-            response['date_range'] = date_range
+            if field in model_fields:
+                date_range = queryset.aggregate(
+                    first=models.Min(field), last=models.Max(field))
+                response['date_range'] = date_range
         return Response(response)
 
 class BaseViewSet(viewsets.ModelViewSet):

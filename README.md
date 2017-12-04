@@ -4,6 +4,7 @@ This is a django app that attempts to get the django orm to hook up to restful s
 instead of the database. So instead of querying data from a database, you would be querying 
 data from a rest api.
 
+
 In your `models.py` instead of inheriting from `django.db.models.Model`, you would
 inherit from `mservice_model.models.ServiceModel`
 
@@ -76,7 +77,7 @@ class FetchAPI(FetchHelpers):
 instance = ServiceApi(FetchAPI("http://192.168.56.101:8000"))
 
 ```
-Take a look at the `external` package to get a feel of how it would be implemented.
+Take a look at the `todo` package to get a feel of how it would be implemented.
 
 Inspiration for this project
 https://www.youtube.com/watch?v=VgM0qmpHDiE

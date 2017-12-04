@@ -65,6 +65,7 @@ class FetchHelpers(object):
             except KeyError:
                 result = value
             new_data.update({key: result})
+
         return cls(**new_data)
 
     def _fetch_data(self, method, url, **kwargs):
@@ -82,6 +83,17 @@ class FetchHelpers(object):
 
     def _path(self, path=''):
         return self.base_url + path
+
+    def create_data(self, data):
+        """Makes a post api to end point to create record.
+        if id exists, makes a put request instead"""
+        d_id = data.pop('id',None)
+        if d_id:
+            response = self._fetch_data('PUT',self._path('{}/'.format(d_id)),json=data)
+        else:
+            response = self._fetch_data('POST',self._path(''),json=data)
+        # import pdb; pdb.set_trace()
+        return response
 
     def _populate_base_request_fields(self, data):
         result = {}
@@ -149,6 +161,7 @@ class FetchHelpers(object):
             params.update(ordering=','.join(order_by))
         print(order_by)
         data = self._fetch_data('GET', self._path(''), params=params)
+        # import pdb; pdb.set_trace()
         as_objects = [self._make_base_request(o, cls) for o in data['results']]
         total = data['count']
         date_range = data.get('date_range')
@@ -169,8 +182,11 @@ class ServiceApi(object):
         last_id = None
         new_filter_by = {**filter_by, **kwargs}
         print(new_filter_by)
-        if 'pk' in filter_by:
-            base_requests = self.instance.get_object_by_id(new_filter_by['pk'],
+        if 'pk' in filter_by or 'id' in filter_by:
+            key = 'pk'
+            if 'id' in filter_by:
+                key = 'id'
+            base_requests = self.instance.get_object_by_id(new_filter_by[key],
                                                            cls)
         else:
             base_requests, total, date_range, last_id = self.instance.get_all_objects(new_filter_by,
@@ -179,8 +195,11 @@ class ServiceApi(object):
         return base_requests, total, date_range, last_id
 
     def create(self, cls=Bunch, **kwargs):
+        """Make api call to create new record
+        expects a dictionary that can be serialized to the class"""
         as_dict = self.to_serializable_dict(**kwargs)
-        return self.instance._make_base_request(as_dict, cls)
+        response = self.instance.create_data(as_dict)
+        return self.instance._make_base_request(response, cls)
 
     def fetch_date_range(self, field_name):
         return self.instance.get_date_range(field_name)

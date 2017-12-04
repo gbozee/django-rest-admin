@@ -7,7 +7,7 @@ from rest_framework import serializers
 class TodoItem(models.Model):
     title = models.TextField()
     completed = models.BooleanField(default=False)
-    owner = models.ForeignKey(User, null=True, related_name='todos')
+    owner = models.ForeignKey(User, null=True, related_name='todos', on_delete=models.CASCADE)
 
     def __repr__(self):
         return "<TodoItem %s>" % self.title

@@ -1,14 +1,16 @@
 """
-WSGI config for mailchecker project.
+WSGI config for with_graphql project.
 
 It exposes the WSGI callable as a module-level variable named ``application``.
 
 For more information on this file, see
-https://docs.djangoproject.com/en/dev/howto/deployment/wsgi/
+https://docs.djangoproject.com/en/2.0/howto/deployment/wsgi/
 """
 
 import os
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "example.client.settings")
 
 from django.core.wsgi import get_wsgi_application
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "with_graphql.settings")
+
 application = get_wsgi_application()

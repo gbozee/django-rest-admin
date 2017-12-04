@@ -170,3 +170,8 @@ class ServiceOptions(CachedPropertiesMixin):
                 return self._service_other_fields[field_name]
             except KeyError:
                 raise FieldDoesNotExist()
+
+    @property
+    def app_config(self):
+        # Don't go through get_app_config to avoid triggering imports.
+        return self.apps.app_configs.get(self.app_label)

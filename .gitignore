@@ -8,3 +8,5 @@ tags
 source.sh
 .cache
 __pycache__
+venv/
+*.egg-info/

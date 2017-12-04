@@ -82,8 +82,8 @@ class ServiceModel(with_metaclass(constructor)):
     _deferred = False
     _state = ModelState()
 
-    def __unicode__(self):
-        return self.id
+    def __str__(self):
+        return str(self.id)
 
     def serializable_value(self, field_name):
         try:
@@ -94,6 +94,9 @@ class ServiceModel(with_metaclass(constructor)):
 
     @property
     def pk(self):
+        if hasattr(self, 'id'):
+            return self.id
+        self.id = None
         return self.id
 
         # klass.objects = klass._default_manager
@@ -121,11 +124,14 @@ class ServiceModel(with_metaclass(constructor)):
         fields = [a.name for a in self._meta.get_fields()]
         data = {}
         for field in fields:
-            data.update({field: getattr(self, field)})
-        return self.objects.get_queryset().create(**data)
-
+            data.update({field: getattr(self, field,None)})
+        result = self.objects.get_queryset().create(**data)
+        for key in fields:
+            setattr(self,key, getattr(result,key,None))
+        return self
     
     def __init__(self, **kwargs):
+        self.id = None
         for key, value in kwargs.items():
             setattr(self, key, value)
 
