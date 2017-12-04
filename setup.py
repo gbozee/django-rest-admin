@@ -19,7 +19,7 @@ setup(
     author='Biola Oyeniyi',
     author_email='gbozee@gmail.com',
     install_requires=[
-        'maya',
+        'maya','requests','simplejson'
     ],
     classifiers=[
         'Environment :: Web Environment',
