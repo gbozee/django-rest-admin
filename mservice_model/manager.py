@@ -4,7 +4,7 @@ class ServiceManager(object):
 
     def __init__(self, model, **kwargs):        
         self.model = model
-        self.mailer = self.mailer or kwargs.get('mailer')
+        self.mailer = self.mailer or kwargs.get('service')
         self.initial_filter_query = kwargs.get('initial_filter_query', {})
 
     def complex_filter(self, filter_obj):

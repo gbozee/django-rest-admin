@@ -13,6 +13,9 @@ from django.forms import modelform_factory
 class BaseManager(ServiceManager):
     queryset = ServiceQuerySet
 
+def _has_contribute_to_class(value):
+    # Only call contribute_to_class() if it's bound.
+    return not inspect.isclass(value) and hasattr(value, 'contribute_to_class')
 
 class constructor(type):
     def __init__(cls, name, bases, clsdict):
@@ -27,7 +30,15 @@ class constructor(type):
             return super_new(cls, name, bases, attrs)
 
         module = attrs.pop('__module__', None)
-        new_class = super_new(cls, name, bases, attrs)
+        new_attrs = {'__module__': module}
+        contributable_attrs = {}
+        for obj_name, obj in list(attrs.items()):
+            if _has_contribute_to_class(obj):
+                contributable_attrs[obj_name] = obj
+            else:
+                new_attrs[obj_name] = obj
+        
+        new_class = super_new(cls, name, bases, new_attrs)
         attr_meta = attrs.pop('Meta', None)
         if not attr_meta:
             meta = getattr(new_class, 'Meta', ServiceOptions)
@@ -47,7 +58,8 @@ class constructor(type):
                     "INSTALLED_APPS." % (module, name))
             else:
                 app_label = app_config.label
-        _service_fields = getattr(meta, '_service_fields',None)
+        _service_fields = getattr(meta, '_service_fields',contributable_attrs)
+        # import ipdb; ipdb.set_trace()
         
         # import pdb
         # pdb.set_trace()
@@ -64,15 +76,14 @@ class constructor(type):
 
         # import pdb; pdb.set_trace()
         if dm:
-            new_class._default_manager = dm(new_class, mailer=service)
+            new_class._default_manager = dm(new_class, service=service)
             new_class.objects = new_class._default_manager
         
         return new_class
 
     def add_to_class(cls, name, value):
         # We should call the contribute_to_class method only if it's bound
-        if not inspect.isclass(value) and hasattr(value,
-                                                  'contribute_to_class'):
+        if _has_contribute_to_class(value):
             value.contribute_to_class(cls, name)
         else:
             setattr(cls, name, value)

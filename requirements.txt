@@ -1,4 +1,1 @@
-Django==2.0
-simplejson==3.10.0
-django_extensions
--e git+https://github.com/gbozee/django-rest-admin.git@master#egg=mservice_model
+-r requirements/base.txt

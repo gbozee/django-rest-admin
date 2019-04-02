@@ -1,4 +1,4 @@
-class GmailQuery(object):
+class ServiceQuery(object):
     select_related = False
     order_by = tuple()
 
@@ -17,7 +17,7 @@ class ServiceQuerySet(object):
         self.model = kwargs.pop('model')
         self.mailer = kwargs.pop('mailer', None)
         self.filter_query = kwargs.pop('filter_query', {})
-        self.query = GmailQuery()
+        self.query = ServiceQuery()
         self.order_dict = ()
 
     def order_by(self, *args, **kwargs):

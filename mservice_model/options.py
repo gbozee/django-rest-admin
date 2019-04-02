@@ -4,6 +4,7 @@ from django.db.models import ForeignKey
 from django.utils.functional import cached_property
 from django.utils.datastructures import ImmutableList, OrderedSet
 from django.apps import apps
+from .exceptions import ServiceException
 IMMUTABLE_WARNING = (
     "The return type of '%s' should never be mutated. If you want to manipulate this list "
     "for your own use, make a copy first.")
@@ -51,13 +52,9 @@ class CachedPropertiesMixin(object):
         combined with filtering of field properties is the public API for
         obtaining this field list.
         """
-        try:
-            return make_immutable_fields_list("concrete_fields",
+        return make_immutable_fields_list("concrete_fields",
                                               (f for f in self.fields
                                                if f.concrete))
-        except AttributeError:
-            import ipdb
-            ipdb.set_trace()
 
     @cached_property
     def local_concrete_fields(self):
@@ -110,8 +107,31 @@ class CachedPropertiesMixin(object):
             obj for obj in all_related_fields
             if not obj.hidden or obj.field.many_to_many))
 
+    @cached_property
+    def _forward_fields_map(self):
+        res = {}
+        fields = self._get_fields(reverse=False)
+        for field in fields:
+            res[field.name] = field
+            # Due to the way Django's internals work, get_field() should also
+            # be able to fetch a field by attname. In the case of a concrete
+            # field with relation, includes the *_id name too
+            try:
+                res[field.attname] = field
+            except AttributeError:
+                pass
+        return res
+
+
 
 class ServiceOptions(CachedPropertiesMixin):
+    FORWARD_PROPERTIES = {
+        'fields', 'many_to_many', 'concrete_fields', 'local_concrete_fields',
+        '_forward_fields_map', 'managers', 'managers_map', 'base_manager',
+        'default_manager',
+    }
+    REVERSE_PROPERTIES = {'related_objects', 'fields_map', '_relation_tree'}
+
     has_auto_field = True
     auto_created = False
     abstract = False
@@ -138,16 +158,47 @@ class ServiceOptions(CachedPropertiesMixin):
             self.verbose_name_raw = self.model_name
             self.object_name = self.model_name.lower()
             # print(self.model_name)
+        self.local_fields = []
         self.private_fields = []
 
-    def add_field(self, *args, **kwargs):
-        pass
+    def add_field(self, field, private=False):
+         # Insert the given field in the order in which it was created, using
+        # the "creation_counter" attribute of the field.
+        # Move many-to-many related fields from self.fields into
+        # self.many_to_many.
+        if private:
+            self.private_fields.append(field)
+        elif field.is_relation and field.many_to_many:
+            self.local_many_to_many.insert(bisect(self.local_many_to_many, field), field)
+        else:
+            self.local_fields.insert(bisect(self.local_fields, field), field)
+            self.setup_pk(field)
+
+        # If the field being added is a relation to another known field,
+        # expire the cache on this field and the forward cache on the field
+        # being referenced, because there will be new relationships in the
+        # cache. Otherwise, expire the cache of references *to* this field.
+        # The mechanism for getting at the related model is slightly odd -
+        # ideally, we'd just ask for field.related_model. However, related_model
+        # is a cached property, and all the models haven't been loaded yet, so
+        # we need to make sure we don't cache a string reference.
+        if field.is_relation and hasattr(field.remote_field, 'model') and field.remote_field.model:
+            try:
+                field.remote_field.model._meta._expire_cache(forward=False)
+            except AttributeError:
+                pass
+            self._expire_cache()
+        else:
+            self._expire_cache(reverse=False)
 
     def _bind(self):
         for field_name, field in self._service_fields.items():
             setattr(self, field_name, field)
             field.set_attributes_from_name(field_name)
-        self.pk = self._service_fields[self._service_pk_fields]
+        try:
+            self.pk = self._service_fields[self._service_pk_fields]
+        except KeyError:
+            raise ServiceException("Did you forget to add an `id` model field?")
         self.additional_bind()
 
     def additional_bind(self):

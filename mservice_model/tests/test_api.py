@@ -1,23 +1,30 @@
-from django.test import TestCase
-from mservice_model.api import ServiceApi,Bunch
 from unittest import mock
-from .response import MockRequest, option_response, get_all_response
-from .test_models import BaseTestCase
+import pytest
+from mservice_model.api import Bunch, ServiceApi
+from django.db import models
+from . import base
+from .response import MockRequest, get_all_response, option_response
 
 
-class ServiceApiTestCase(BaseTestCase):
+def test_get_fields(service,mock_request):
+    fields = service.initialize()
+    assert isinstance(fields['title'],models.CharField)
+
+class ServiceApiTestCase(base.BaseTestCase):
     def setUp(self):
         
         super().setUp()
         self.mock_options.return_value = MockRequest(option_response,overwrite=True)
-        
+        self.service = ServiceApi(self.base_url)      
+
     def test_correct_fields_are_returned(self):
-        instance = ServiceApi(self.base_url)      
-        self.assertEqual(instance.instance.fields, option_response['actions']['POST'])
+        self.assertEqual(self.service.instance.fields, option_response['actions']['POST'])
         
     def test_get_all_objects(self):
         self.mock_get.return_value = MockRequest(get_all_response, overwrite=True)
-        instance = ServiceApi(self.base_url)
-        response = instance.instance.get_all_objects({},None,Bunch)
+        response = self.service.instance.get_all_objects({},None,Bunch)
         self.assertEqual(response[1], 4)
         self.assertEqual(response[3], 4)
+
+
+
