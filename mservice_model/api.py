@@ -12,18 +12,20 @@ from mservice_model.fields import AutoField, ListField
 
 
 class MyEncoder(json.JSONEncoder):
-
     def default(self, obj):
+        from mservice_model.models import ServiceModel
+
         if isinstance(obj, datetime):
             return obj.isoformat()
         if isinstance(obj, Decimal):
             return str(obj)
+        if isinstance(obj, ServiceModel):
+            return obj.id
 
         return json.JSONEncoder.default(self, obj)
 
 
 class Bunch(object):
-
     def __init__(self, *args, **kwargs):
         self.__dict__ = kwargs
         self.pk = self.id
@@ -39,6 +41,41 @@ class Bunch(object):
         return getattr(self, field.attname)
 
 
+def get_field_type(cls):
+    options = {
+        "decimal": fields.DecimalField,
+        "datetime": fields.DateTimeField,
+        "integer": fields.IntegerField,
+        "string": fields.CharField,
+        "email": fields.EmailField,
+        "field": fields.CharField,
+        "list": ListField,
+        "boolean": fields.BooleanField,
+    }
+    found = [(x, y) for x, y in options.items() if isinstance(cls, y)]
+    if len(found) > 0:
+        return found[0][0]
+
+
+def model_field_to_api_format(field):
+    name = field.name
+    if isinstance(field, fields.AutoField):
+        _type = "integer"
+    elif isinstance(field, fields.related.ForeignKey):
+        _type = "integer"
+        name = f"{name}_id"
+    else:
+        _type = get_field_type(field)
+    return {
+        name: {
+            "type": _type,
+            "required": field.null == False,
+            "label": field.verbose_name,
+            "read_only": False,
+        }
+    }
+
+
 class FetchHelpers(object):
     """The api class to implement all the api calls responsible
     to get the admin interface to be functional"""
@@ -49,13 +86,17 @@ class FetchHelpers(object):
     def _make_base_request(self, data, cls):
         """Create an instance of the class passed from the
         response of the dictionary"""
-        field_with_types = {
-            k: v['type']
-            for k, v in self.fields.items()
-        }
+        try:
+            class_fields = [
+                model_field_to_api_format(y) for y in cls._meta.get_fields()
+            ]
+            as_dict = {list(x.keys())[0]: list(x.values())[0] for x in class_fields}
+            field_with_types = {k: v["type"] for k, v in as_dict.items()}
+        except AttributeError:
+            field_with_types = {k: v["type"] for k, v in self.fields.items()}
         options = {
-            'decimal': lambda x: Decimal(x) if x else None,
-            'datetime': lambda x: maya.parse(x).datetime() if x else None,
+            "decimal": lambda x: Decimal(x) if x else None,
+            "datetime": lambda x: maya.parse(x).datetime() if x else None,
         }
         new_data = {}
         for key, value in data.items():
@@ -70,57 +111,56 @@ class FetchHelpers(object):
 
     def _fetch_data(self, method, url, **kwargs):
         method_map = {
-            'GET': requests.get,
-            'POST': requests.post,
-            'PUT': requests.put,
-            'DELETE': requests.delete,
-            'OPTIONS': requests.options
+            "GET": requests.get,
+            "POST": requests.post,
+            "PUT": requests.put,
+            "DELETE": requests.delete,
+            "OPTIONS": requests.options,
         }
         request = method_map.get(method)
         response = request(url, **kwargs)
         response.raise_for_status()
         return response.json()
 
-    def _path(self, path=''):
+    def _path(self, path=""):
         return self.base_url + path
 
     def create_data(self, data):
         """Makes a post api to end point to create record.
         if id exists, makes a put request instead"""
-        d_id = data.pop('id',None)
+        d_id = data.pop("id", None)
         if d_id:
-            response = self._fetch_data('PUT',self._path('{}/'.format(d_id)),json=data)
+            response = self._fetch_data(
+                "PUT", self._path("{}/".format(d_id)), json=data
+            )
         else:
-            response = self._fetch_data('POST',self._path(''),json=data)
+            response = self._fetch_data("POST", self._path(""), json=data)
         # import pdb; pdb.set_trace()
         return response
 
     def _populate_base_request_fields(self, data):
         result = {}
         options = {
-            'decimal': fields.DecimalField,
-            'datetime': fields.DateTimeField,
-            'integer': fields.IntegerField,
-            'string': fields.CharField,
-            'email': fields.EmailField,
-            'field': fields.CharField,
-            'list': ListField,
-            'boolean': fields.BooleanField
+            "decimal": fields.DecimalField,
+            "datetime": fields.DateTimeField,
+            "integer": fields.IntegerField,
+            "string": fields.CharField,
+            "email": fields.EmailField,
+            "field": fields.CharField,
+            "list": ListField,
+            "boolean": fields.BooleanField,
         }
         for key, value in data.items():
-            default_dict = {
-                'verbose_name': value['label'],
-                'null': value['required'],
-            }
-            if value['type'] in ["string", "email"]:
-                if value.get('max_length'):
-                    default_dict.update(max_length=value['max_length'])
-            if value['type'] == 'field':
+            default_dict = {"verbose_name": value["label"], "null": value["required"]}
+            if value["type"] in ["string", "email"]:
+                if value.get("max_length"):
+                    default_dict.update(max_length=value["max_length"])
+            if value["type"] == "field":
                 default_dict.update(max_length=70)
-            if key == 'id':
+            if key == "id":
                 result[key] = AutoField()
             else:
-                result[key] = options[value['type']](**default_dict)
+                result[key] = options[value["type"]](**default_dict)
 
         return result
 
@@ -130,8 +170,8 @@ class FetchHelpers(object):
 
     def get_fields(self):
         """Makes an OPTIONS call to the djangorestframework endpoint"""
-        fetched_data =  self._fetch_data('OPTIONS', self._path(''))
-        return fetched_data['actions']['POST']
+        fetched_data = self._fetch_data("OPTIONS", self._path(""))
+        return fetched_data["actions"]["POST"]
 
     def construct_model_fields(self):
         data = self.fields
@@ -151,27 +191,24 @@ class FetchHelpers(object):
         raise NotImplementedError
 
     def get_object_by_id(self, request_id, cls=Bunch):
-        data = self._fetch_data('GET', self._path(
-            '{}/'.format(request_id)))
+        data = self._fetch_data("GET", self._path("{}/".format(request_id)))
         return [self._make_base_request(data, cls)]
 
     def get_all_objects(self, filter_by, order_by, cls):
-        params = {**filter_by, **{'field_name': 'modified'}}
+        params = {**filter_by, **{"field_name": "modified"}}
         if order_by:
-            params.update(ordering=','.join(order_by))
+            params.update(ordering=",".join(order_by))
         print(order_by)
-        data = self._fetch_data('GET', self._path(''), params=params)
+        data = self._fetch_data("GET", self._path(""), params=params)
         # import pdb; pdb.set_trace()
-        as_objects = [self._make_base_request(o, cls) for o in data['results']]
-        total = data['count']
-        date_range = data.get('date_range')
-        last_id = data.get('last_id')
+        as_objects = [self._make_base_request(o, cls) for o in data["results"]]
+        total = data["count"]
+        date_range = data.get("date_range")
+        last_id = data.get("last_id")
         return as_objects, total, date_range, last_id
 
 
-
 class ServiceApi(object):
-
     def __init__(self, api_instance, base_class=FetchHelpers):
         self.instance = FetchHelpers(api_instance)
 
@@ -182,15 +219,15 @@ class ServiceApi(object):
         last_id = None
         new_filter_by = {**filter_by, **kwargs}
         print(new_filter_by)
-        if 'pk' in filter_by or 'id' in filter_by:
-            key = 'pk'
-            if 'id' in filter_by:
-                key = 'id'
-            base_requests = self.instance.get_object_by_id(new_filter_by[key],
-                                                           cls)
+        if "pk" in filter_by or "id" in filter_by:
+            key = "pk"
+            if "id" in filter_by:
+                key = "id"
+            base_requests = self.instance.get_object_by_id(new_filter_by[key], cls)
         else:
-            base_requests, total, date_range, last_id = self.instance.get_all_objects(new_filter_by,
-                                                                                      order_by, cls)
+            base_requests, total, date_range, last_id = self.instance.get_all_objects(
+                new_filter_by, order_by, cls
+            )
             date_range = self.serialize_date_range(date_range)
         return base_requests, total, date_range, last_id
 
@@ -207,18 +244,18 @@ class ServiceApi(object):
     def serialize_date_range(self, date_range):
         result = date_range or {}
         if result:
-            result.update(first=maya.when(result['first']).datetime())
-            result.update(last=maya.when(result['last']).datetime())
+            result.update(first=maya.when(result["first"]).datetime())
+            result.update(last=maya.when(result["last"]).datetime())
         return result
 
     def aggregate(self, **kwargs):
         aliases = [x.default_alias for key, x in kwargs.items()]
-        field_name = aliases[0].split('__')[0]
+        field_name = aliases[0].split("__")[0]
         result = self.fetch_date_range(field_name)
-        if 'first' in kwargs.keys():
-            result.update(first=maya.when(result['first']).datetime())
-        if 'last' in kwargs.keys():
-            result.update(last=maya.when(result['last']).datetime())
+        if "first" in kwargs.keys():
+            result.update(first=maya.when(result["first"]).datetime())
+        if "last" in kwargs.keys():
+            result.update(last=maya.when(result["last"]).datetime())
         return result
 
     def fetch_datetimes(self, *args, **kwargs):

@@ -37,9 +37,10 @@ class ServiceManager(object):
         return self.get_queryset().filter(*args, **kwargs)
 
     def get_queryset(self):
+        print(self.mailer)
         return self.queryset(
             model=self.model,
-            mailer=self.mailer,
+            service=self.mailer,
             filter_query=self.initial_filter_query,
         )
 

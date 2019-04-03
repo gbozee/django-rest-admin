@@ -21,7 +21,7 @@ def mock_request(mocker):
     mock_options = patcher.options
     mock_options.return_value = MockRequest(option_response, overwrite=True)
 
-    def _method(method, return_value=None):
+    def _method(method, return_value=None, side_effect=None):
         options = {
             "get": patcher.get,
             "post": patcher.post,
@@ -30,7 +30,10 @@ def mock_request(mocker):
             "delete": patcher.delete,
         }
         value = options[method]
-        value.return_value = return_value
+        if side_effect:
+            value.side_effect = side_effect
+        else:
+            value.return_value = return_value
         return value
 
     return _method

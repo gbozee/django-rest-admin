@@ -10,13 +10,13 @@ class ServiceQuerySet(object):
     def using(self, db):
         return self
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **kkwargs):
         self._cache = None
         self.total_count = 0
         self.ordered = True
-        self.model = kwargs.pop('model')
-        self.mailer = kwargs.pop('mailer', None)
-        self.filter_query = kwargs.pop('filter_query', {})
+        self.model = kkwargs.pop('model')
+        self.service = kkwargs.pop('service', None)
+        self.filter_query = kkwargs.pop('filter_query', {})
         self.query = ServiceQuery()
         self.order_dict = ()
 
@@ -29,7 +29,7 @@ class ServiceQuerySet(object):
     def aggregate(self, **kwargs):
         if self.date_range:
             return self.date_range
-        return self.mailer.aggregate(**kwargs)
+        return self.service.aggregate(**kwargs)
 
     def none(self, *args, **kwargs):
         cloned_query = self._clone()
@@ -38,7 +38,7 @@ class ServiceQuerySet(object):
 
     def _variables(self):
         return dict(model=self.model,
-        mailer=self.mailer,
+        service=self.service,
         filter_query=self.filter_query)
 
     def _clone(self, *args, **kwargs):
@@ -71,7 +71,7 @@ class ServiceQuerySet(object):
         return self
 
     def create(self, **kwargs):
-        data = self.mailer.create(cls=self.model, **kwargs)
+        data = self.service.create(cls=self.model, **kwargs)
         self._cache = [
                 self._set_model_attrs(instance) for instance in [data]
             ]
@@ -116,7 +116,7 @@ class ServiceQuerySet(object):
         if kwargs:
             self._cache = None
         if not self._cache:
-            messages, self.total_count, self.date_range, self.last_id = self.mailer.get_data(
+            messages, self.total_count, self.date_range, self.last_id = self.service.get_data(
                 **self.params_for_fetching_data(), **kwargs)
             self._cache = [
                 self._set_model_attrs(instance) for instance in messages
@@ -134,10 +134,10 @@ class ServiceQuerySet(object):
             "'kind' must be one of 'year', 'month', 'day', 'hour', 'minute' or 'second'."
         assert order in ('ASC', 'DESC'), \
             "'order' must be either 'ASC' or 'DESC'."
-        return self.mailer.datetimes(field_name, kind, order, self.filter_query)
+        return self.service.datetimes(field_name, kind, order, self.filter_query)
 
     def distinct(self):
         return self
 
     def values_list(self, *args, **kwargs):
-        return self.mailer.get_values_list(*args, **kwargs)
+        return self.service.get_values_list(*args, **kwargs)
